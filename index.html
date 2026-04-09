@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1024">
+    <title>JSON → M3U Playlist Converter</title>
+    <!-- বাংলা ফন্টের জন্য Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ----- CSS Variables (Light Theme default) ----- */
+        :root {
+            --bg-gradient: linear-gradient(145deg, #f4f9fc, #e2eef5);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text-primary: #0b2e3c;
+            --text-secondary: #1e4a5c;
+            --border-light: #c2dae5;
+            --accent: #1f7a8c;
+            --accent-hover: #0e5668;
+            --input-bg: #ffffff;
+            --textarea-bg: #0b262f;
+            --textarea-color: #e6f3f8;
+            --error-bg: #ffeae8;
+            --error-color: #bc3f34;
+            --success-bg: #dff0d8;
+            --success-color: #1f5c3d;
+            --badge-bg: #bed9e6;
+            --shadow: 0 20px 40px rgba(0, 15, 30, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(145deg, #0a1a22, #112a35, #0e2e3c);
+            --card-bg: rgba(20, 35, 45, 0.95);
+            --text-primary: #d8e9f0;
+            --text-secondary: #b0cfdc;
+            --border-light: #2a5566;
+            --accent: #3fa2b8;
+            --accent-hover: #5bbcd4;
+            --input-bg: #1a3340;
+            --textarea-bg: #051218;
+            --textarea-color: #cce3ec;
+            --error-bg: #3d1e1c;
+            --error-color: #f28b82;
+            --success-bg: #1a3a2a;
+            --success-color: #a5d6a5;
+            --badge-bg: #2a5566;
+            --shadow: 0 20px 40px rgba(0,0,0,0.5);
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            font-family: 'Segoe UI', 'Noto Sans', 'Noto Sans Bengali', system-ui, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            margin: 0;
+            transition: background 0.2s;
+        }
+
+        .card {
+            max-width: 1400px;
+            width: 100%;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 36px;
+            box-shadow: var(--shadow);
+            padding: 24px 26px 32px;
+            border: 1px solid var(--border-light);
+            transition: background 0.2s, border 0.2s;
+        }
+
+        /* ----- Header & Controls ----- */
+        .top-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 15px;
+        }
+
+        h1 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: clamp(1.6rem, 6vw, 2.2rem);
+            color: var(--text-primary);
+            margin: 0;
+        }
+        h1 span {
+            background: var(--accent);
+            color: white;
+            font-size: 0.8rem;
+            padding: 4px 14px;
+            border-radius: 60px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            background: var(--input-bg);
+            border: 1.5px solid var(--border-light);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.15s;
+            flex-wrap: wrap;
+        }
+        .icon-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        select.icon-btn {
+            appearance: none;
+            padding-right: 30px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+        }
+
+        /* ----- Settings Panel ----- */
+        .settings-panel {
+            background: var(--input-bg);
+            border-radius: 24px;
+            padding: 20px 22px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-light);
+        }
+
+        .settings-title {
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            white-space: normal;
+        }
+
+        .field-mapping {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px 20px;
+        }
+
+        .map-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .map-item label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .map-item input {
+            padding: 10px 14px;
+            border: 1.5px solid var(--border-light);
+            border-radius: 40px;
+            font-size: 0.9rem;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+        .map-item input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* ----- Input Methods (Upload + Paste + Convert middle) ----- */
+        .input-methods {
+            display: flex;
+            align-items: stretch;
+            gap: 20px;
+            margin-bottom: 26px;
+            flex-wrap: wrap;
+        }
+
+        .upload-card, .paste-card {
+            flex: 1 1 280px;
+            background: var(--input-bg);
+            border-radius: 26px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            min-width: 300px;
+        }
+
+        .convert-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 150px;
+        }
+
+        .convert-btn-large {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px 28px;
+            border-radius: 48px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+            border: 1px solid var(--accent-hover);
+            transition: 0.2s;
+            white-space: nowrap;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .convert-btn-large:hover {
+            background: var(--accent-hover);
+            transform: scale(1.02);
+        }
+        .convert-btn-large span {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 1.35rem;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--accent);
+            border-radius: 20px;
+            padding: 18px 16px;
+            text-align: center;
+            background: var(--card-bg);
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .upload-area:hover {
+            background: rgba(31,122,140,0.05);
+        }
+
+        .file-input {
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid var(--border-light);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            width: 100%;
+        }
+
+        .sample-btn {
+            background: var(--badge-bg);
+            border: none;
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px solid var(--border-light);
+            margin-top: 14px;
+        }
+
+        .paste-area {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .json-paste-textarea {
+            width: 100%;
+            height: 140px;
+            padding: 16px;
+            font-family: monospace;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-light);
+            border-radius: 20px;
+            resize: vertical;
+            color: var(--text-primary);
+        }
+
+        /* ----- Output Section with Enhanced Search ----- */
+        .output-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0 12px;
+            gap: 15px;
+        }
+        .output-header h2 {
+            font-size: 1.6rem;
+            color: var(--text-primary);
+        }
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--input-bg);
+            border-radius: 40px;
+            border: 1.5px solid var(--border-light);
+            padding: 2px;
+        }
+        .search-wrapper input {
+            padding: 10px 8px 10px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            width: 180px;
+            outline: none;
+        }
+        .search-wrapper button {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .search-wrapper button:hover {
+            background: var(--border-light);
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background: var(--input-bg);
+            border: 1.5px solid var(--border-light);
+            color: var(--text-primary);
+            padding: 10px 22px;
+            border-radius: 48px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        textarea#m3uOutput {
+            width: 100%;
+            height: 360px;
+            padding: 20px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.95rem;
+            background: var(--textarea-bg);
+            color: var(--textarea-color);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            resize: vertical;
+            white-space: pre;
+            overflow: auto;
+        }
+
+        textarea#m3uOutput::selection {
+            background: #f9e64b;
+            color: #000;
+        }
+
+        .error-msg {
+            padding: 14px 22px;
+            border-radius: 48px;
+            margin-top: 18px;
+            display: none;
+        }
+
+        .footer-note {
+            margin-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+        }
+
+        /* ভাষা সিলেকশন */
+        html[lang="en"] body .lang-bn,
+        body[lang="en"] .lang-bn { display: none !important; }
+        html[lang="bn"] body .lang-en,
+        body[lang="bn"] .lang-en { display: none !important; }
+        html[lang="bn"] body .lang-bn,
+        body[lang="bn"] .lang-bn { display: inline !important; }
+        html[lang="en"] body .lang-en,
+        body[lang="en"] .lang-en { display: inline !important; }
+    </style>
+</head>
+<body lang="en" data-theme="light">
+<div class="card">
+    <div class="top-bar">
+        <h1>
+            📡 <span class="lang-en">JSON to M3U</span><span class="lang-bn">JSON থেকে M3U</span>
+            <span class="lang-en" style="font-size:0.7rem;">IPTV</span><span class="lang-bn" style="font-size:0.7rem;">আইপিটিভি</span>
+        </h1>
+        <div class="control-group">
+            <button class="icon-btn" id="langToggle" title="Toggle Language">
+                🌐 <span class="lang-en">বাংলা</span><span class="lang-bn">English</span>
+            </button>
+            <select class="icon-btn" id="themeSelect" title="Theme">
+                <option value="light">☀️ Light</option>
+                <option value="dark">🌙 Dark</option>
+                <option value="system">💻 System</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <div class="settings-title">
+            <span class="lang-en">⚙️ Field Mapping (JSON key → M3U tag)</span>
+            <span class="lang-bn">⚙️ ফিল্ড ম্যাপিং (JSON কী → M3U ট্যাগ)</span>
+        </div>
+        <div class="field-mapping">
+            <div class="map-item"><label>tvg-id <span class="lang-en">(ID)</span></label><input type="text" id="mapId" value="id,channel_id,cid,tvg-id"></div>
+            <div class="map-item"><label>tvg-logo <span class="lang-en">(Logo)</span></label><input type="text" id="mapLogo" value="logo,channel_logo,tvg-logo,icon,image"></div>
+            <div class="map-item"><label>group-title <span class="lang-en">(Group)</span></label><input type="text" id="mapGroup" value="group,cat_name,category,genre,group-title"></div>
+            <div class="map-item"><label>Title <span class="lang-en">(Channel Name)</span></label><input type="text" id="mapTitle" value="title,name,channel_name,display_name"></div>
+            <div class="map-item"><label>URL <span class="lang-en">(Stream URL)</span></label><input type="text" id="mapUrl" value="url,stream_url,file,src,link"></div>
+        </div>
+    </div>
+
+    <!-- তিনটি কলাম: আপলোড + কনভার্ট বাটন + পেস্ট -->
+    <div class="input-methods">
+        <div class="upload-card">
+            <div class="section-title"><span class="lang-en">📁 Upload File</span><span class="lang-bn">📁 ফাইল আপলোড</span></div>
+            <div class="upload-area" id="dropZone">
+                <div style="margin-bottom: 8px;"><span class="lang-en">⬆️ Select JSON file</span><span class="lang-bn">⬆️ JSON ফাইল নির্বাচন</span></div>
+                <input type="file" id="jsonFileInput" accept=".json,application/json" class="file-input">
+                <button class="sample-btn" id="loadSampleBtn">✨ <span class="lang-en">Load Sample</span><span class="lang-bn">স্যাম্পল লোড</span></button>
+            </div>
+            <div style="font-size:0.85rem; opacity:0.8;"><span class="lang-en">Drag & drop supported</span><span class="lang-bn">ড্র্যাগ ও ড্রপ সমর্থিত</span></div>
+            <div id="uploadStatus" style="margin-top: 8px; font-size:0.9rem; color: var(--accent);"></div>
+        </div>
+
+        <div class="convert-area">
+            <button class="convert-btn-large" id="masterConvertBtn">
+                🔄 <span class="lang-en">Convert to M3U</span><span class="lang-bn">M3U তৈরি করুন</span>
+                <span class="lang-en">(click to convert)</span><span class="lang-bn">(ক্লিক করুন)</span>
+            </button>
+        </div>
+
+        <div class="paste-card">
+            <div class="section-title"><span class="lang-en">📋 Paste JSON</span><span class="lang-bn">📋 JSON পেস্ট</span></div>
+            <div class="paste-area">
+                <textarea id="jsonPasteInput" class="json-paste-textarea" placeholder='{"channels": [...]}'></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="output-header">
+        <h2><span class="lang-en">📄 M3U Output</span><span class="lang-bn">📄 M3U আউটপুট</span></h2>
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="🔍 Search...">
+            <button id="searchPrevBtn" title="Previous">◀</button>
+            <button id="searchNextBtn" title="Next">▶</button>
+            <button id="clearSearchBtn" title="Clear">✕</button>
+        </div>
+        <div class="action-buttons">
+            <button class="btn" id="copyBtn"><span class="lang-en">📋 Copy</span><span class="lang-bn">📋 কপি</span></button>
+            <button class="btn btn-primary" id="downloadBtn"><span class="lang-en">⬇️ Download</span><span class="lang-bn">⬇️ ডাউনলোড</span></button>
+        </div>
+    </div>
+
+    <textarea id="m3uOutput" readonly placeholder="M3U content will appear here..."></textarea>
+    <div id="errorBox" class="error-msg"></div>
+
+    <div class="footer-note">
+        <div><span class="lang-en">🔹 #EXTINF:-1 tvg-id tvg-logo group-title</span><span class="lang-bn">🔹 #EXTINF:-1 tvg-id tvg-logo group-title</span></div>
+        <div><span class="lang-en">⚡ Click Convert to process</span><span class="lang-bn">⚡ কনভার্ট বাটনে ক্লিক করুন</span></div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        "use strict";
+        const body = document.body;
+        const html = document.documentElement;
+        const fileInput = document.getElementById('jsonFileInput');
+        const m3uOutput = document.getElementById('m3uOutput');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const errorBox = document.getElementById('errorBox');
+        const sampleBtn = document.getElementById('loadSampleBtn');
+        const dropZone = document.getElementById('dropZone');
+        const jsonPasteTextarea = document.getElementById('jsonPasteInput');
+        const masterConvertBtn = document.getElementById('masterConvertBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const langToggle = document.getElementById('langToggle');
+        const themeSelect = document.getElementById('themeSelect');
+        const searchInput = document.getElementById('searchInput');
+        const searchPrevBtn = document.getElementById('searchPrevBtn');
+        const searchNextBtn = document.getElementById('searchNextBtn');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+        const mapId = document.getElementById('mapId');
+        const mapLogo = document.getElementById('mapLogo');
+        const mapGroup = document.getElementById('mapGroup');
+        const mapTitle = document.getElementById('mapTitle');
+        const mapUrl = document.getElementById('mapUrl');
+
+        // স্টেট: আপলোড করা ফাইলের কন্টেন্ট
+        let uploadedFileContent = null;
+        let uploadedFileName = '';
+
+        // ----- ভাষা টগল -----
+        function setLanguage(lang) {
+            html.setAttribute('lang', lang);
+            body.setAttribute('lang', lang);
+            localStorage.setItem('m3u_lang', lang);
+        }
+        langToggle.addEventListener('click', () => {
+            const currentLang = html.getAttribute('lang') || 'en';
+            setLanguage(currentLang === 'en' ? 'bn' : 'en');
+        });
+        setLanguage(localStorage.getItem('m3u_lang') || 'en');
+
+        // ----- থিম -----
+        function applyTheme(theme) {
+            if (theme === 'system') {
+                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            } else {
+                html.setAttribute('data-theme', theme);
+            }
+            localStorage.setItem('m3u_theme', theme);
+        }
+        themeSelect.addEventListener('change', e => applyTheme(e.target.value));
+        const savedTheme = localStorage.getItem('m3u_theme') || 'light';
+        themeSelect.value = savedTheme;
+        applyTheme(savedTheme);
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (themeSelect.value === 'system') applyTheme('system');
+        });
+
+        // স্যাম্পল ডাটা
+        const SAMPLE_DATA = [
+            {"cat_name":"Group/Category","livetvs":[
+                {"id":1,"channel_name":"Channel 1","stream_url":"https://example_1.com/index.m3u8","channel_logo":"https://example.com/pic1.png"},
+                {"id":2,"channel_name":"Channel 2","stream_url":"https://example_2.com/index.m3u8","channel_logo":"https://example.com/pic2.png"}
+            ]}
+        ];
+
+        function getMappingKeys(str) {
+            return str.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+        }
+
+        // চ্যানেল এক্সট্রাক্টর (প্যারেন্ট গ্রুপ সহ)
+        function extractChannelsFromJson(jsonData) {
+            const idKeys = getMappingKeys(mapId.value);
+            const logoKeys = getMappingKeys(mapLogo.value);
+            const groupKeys = getMappingKeys(mapGroup.value);
+            const titleKeys = getMappingKeys(mapTitle.value);
+            const urlKeys = getMappingKeys(mapUrl.value);
+
+            function looksLikeChannelArray(arr) {
+                if (!Array.isArray(arr) || !arr.length) return false;
+                const first = arr[0];
+                if (!first || typeof first !== 'object') return false;
+                for (let key in first) {
+                    if (urlKeys.some(u => key.toLowerCase().includes(u))) return true;
+                }
+                return false;
+            }
+
+            function extractContexts(data, parent = null, visited = new WeakSet()) {
+                let results = [];
+                if (!data || typeof data !== 'object') return results;
+                if (visited.has(data)) return results;
+                visited.add(data);
+                if (Array.isArray(data)) {
+                    if (looksLikeChannelArray(data)) {
+                        results.push({ array: data, parent });
+                    } else {
+                        for (let item of data) results.push(...extractContexts(item, data, visited));
+                    }
+                } else {
+                    for (let key in data) {
+                        if (data.hasOwnProperty(key)) results.push(...extractContexts(data[key], data, visited));
+                    }
+                }
+                return results;
+            }
+
+            const contexts = extractContexts(jsonData);
+            const channels = [];
+            let counter = 0;
+            for (let ctx of contexts) {
+                let parentGroup = '';
+                if (ctx.parent && typeof ctx.parent === 'object') {
+                    for (let key in ctx.parent) {
+                        const lk = key.toLowerCase();
+                        if (groupKeys.some(k => lk.includes(k) || lk === k)) {
+                            parentGroup = String(ctx.parent[key] ?? '');
+                            break;
+                        }
+                    }
+                }
+                for (let item of ctx.array) {
+                    if (!item || typeof item !== 'object') continue;
+                    counter++;
+                    let id = '', logo = '', group = parentGroup, title = '', url = '';
+                    for (let key in item) {
+                        const lk = key.toLowerCase();
+                        const val = item[key] != null ? String(item[key]) : '';
+                        if (!id && idKeys.some(k => lk.includes(k) || lk === k)) id = val;
+                        if (!logo && logoKeys.some(k => lk.includes(k) || lk === k)) logo = val;
+                        if (!group && groupKeys.some(k => lk.includes(k) || lk === k)) group = val;
+                        if (!title && titleKeys.some(k => lk.includes(k) || lk === k)) title = val;
+                        if (!url && urlKeys.some(k => lk.includes(k) || lk === k)) url = val;
+                    }
+                    if (!title) title = `Channel ${counter}`;
+                    if (url) channels.push({ id, logo, group, title, url });
+                }
+            }
+            return channels;
+        }
+
+        function convertToM3u(channels) {
+            const lines = ['#EXTM3U', '', ''];
+            for (let ch of channels) {
+                lines.push(`#EXTINF:-1 tvg-id="${ch.id}" tvg-logo="${ch.logo}" group-title="${ch.group}",${ch.title}`);
+                lines.push(ch.url);
+                lines.push('');
+            }
+            return lines.join('\n');
+        }
+
+        // মূল কনভার্ট ফাংশন (ইনপুট সোর্স অনুযায়ী)
+        function performConversion() {
+            let jsonString = '';
+            if (uploadedFileContent) {
+                jsonString = uploadedFileContent;
+            } else {
+                jsonString = jsonPasteTextarea.value.trim();
+            }
+            if (!jsonString) {
+                showError('No JSON input. Please upload a file or paste JSON.');
+                return;
+            }
+            try {
+                const data = JSON.parse(jsonString);
+                const channels = extractChannelsFromJson(data);
+                if (!channels.length) throw new Error('No valid channels found.');
+                const m3u = convertToM3u(channels);
+                m3uOutput.value = m3u;
+                errorBox.style.display = 'none';
+                toggleButtons(true);
+                window.searchMatches = [];
+                window.currentMatchIndex = -1;
+            } catch (e) {
+                showError(e.message);
+                toggleButtons(false);
+            }
+        }
+
+        function showError(msg) {
+            errorBox.style.display = 'block';
+            errorBox.style.background = 'var(--error-bg)';
+            errorBox.style.color = 'var(--error-color)';
+            errorBox.textContent = '❌ ' + msg;
+            m3uOutput.value = '';
+        }
+
+        function toggleButtons(enable) {
+            copyBtn.disabled = !enable;
+            downloadBtn.disabled = !enable;
+        }
+
+        // ফাইল হ্যান্ডলিং (কনভার্ট নয়, শুধু কন্টেন্ট সংরক্ষণ)
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                uploadedFileContent = e.target.result;
+                uploadedFileName = file.name;
+                uploadStatus.textContent = `✅ ${file.name}`;
+                jsonPasteTextarea.value = ''; // পেস্ট ক্লিয়ার
+                errorBox.style.display = 'none';
+            };
+            reader.onerror = () => showError('File read error');
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        fileInput.addEventListener('change', e => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background = 'rgba(31,122,140,0.1)'; });
+        dropZone.addEventListener('dragleave', () => dropZone.style.background = '');
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.style.background = '';
+            const file = e.dataTransfer.files[0];
+            if (file && (file.type === 'application/json' || file.name.endsWith('.json'))) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(file);
+            } else showError('Only JSON files accepted');
+        });
+        dropZone.addEventListener('click', (e) => { if (e.target !== fileInput) fileInput.click(); });
+
+        // স্যাম্পল লোড (শুধু পেস্টে বসাবে, কনভার্ট নয়)
+        sampleBtn.addEventListener('click', () => {
+            jsonPasteTextarea.value = JSON.stringify(SAMPLE_DATA, null, 2);
+            uploadedFileContent = null;
+            uploadedFileName = '';
+            uploadStatus.textContent = '';
+            fileInput.value = '';
+            errorBox.style.display = 'none';
+        });
+
+        // মাস্টার কনভার্ট বাটন
+        masterConvertBtn.addEventListener('click', performConversion);
+
+        // কপি ও ডাউনলোড
+        copyBtn.addEventListener('click', async () => {
+            if (!m3uOutput.value) return;
+            try {
+                await navigator.clipboard.writeText(m3uOutput.value);
+                const orig = copyBtn.innerHTML;
+                copyBtn.innerHTML = '✅ <span class="lang-en">Copied!</span><span class="lang-bn">কপি হয়েছে!</span>';
+                setTimeout(() => copyBtn.innerHTML = orig, 1500);
+            } catch { showError('Copy failed'); }
+        });
+        downloadBtn.addEventListener('click', () => {
+            if (!m3uOutput.value) return;
+            const blob = new Blob([m3uOutput.value], { type: 'audio/x-mpegurl' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `playlist_${Date.now()}.m3u`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+
+        // সার্চ ইম্প্লিমেন্ট (আগের মতো)
+        let searchMatches = [];
+        let currentMatchIndex = -1;
+        function performSearch() {
+            const term = searchInput.value.trim();
+            if (!term) { searchMatches = []; m3uOutput.setSelectionRange(0,0); return; }
+            const text = m3uOutput.value;
+            const lowerText = text.toLowerCase();
+            const lowerTerm = term.toLowerCase();
+            searchMatches = [];
+            let idx = 0;
+            while ((idx = lowerText.indexOf(lowerTerm, idx)) !== -1) {
+                searchMatches.push({ start: idx, end: idx + term.length });
+                idx += term.length;
+            }
+            if (searchMatches.length) {
+                currentMatchIndex = 0;
+                highlightMatch(0);
+            }
+        }
+        function highlightMatch(index) {
+            if (!searchMatches.length) return;
+            if (index < 0) index = 0;
+            if (index >= searchMatches.length) index = searchMatches.length - 1;
+            currentMatchIndex = index;
+            const m = searchMatches[currentMatchIndex];
+            m3uOutput.focus();
+            m3uOutput.setSelectionRange(m.start, m.end);
+            const lineHeight = parseInt(getComputedStyle(m3uOutput).lineHeight) || 20;
+            const lines = m3uOutput.value.substring(0, m.start).split('\n').length;
+            m3uOutput.scrollTop = (lines - 5) * lineHeight;
+        }
+        searchInput.addEventListener('input', performSearch);
+        searchInput.addEventListener('keydown', e => { if(e.key==='Enter') { e.preventDefault(); if(searchMatches.length) highlightMatch((currentMatchIndex+1)%searchMatches.length); }});
+        searchPrevBtn.addEventListener('click', () => { if(searchMatches.length) highlightMatch(currentMatchIndex-1); });
+        searchNextBtn.addEventListener('click', () => { if(searchMatches.length) highlightMatch(currentMatchIndex+1); });
+        clearSearchBtn.addEventListener('click', () => { searchInput.value = ''; searchMatches = []; m3uOutput.setSelectionRange(0,0); });
+
+        toggleButtons(false);
+        errorBox.style.display = 'none';
+    })();
+</script>
+</body>
+</html>
