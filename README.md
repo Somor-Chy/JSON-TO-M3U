@@ -23,19 +23,6 @@
 
 ---
 
-## 🚀 Live Demo | সরাসরি ব্যবহার
-
-> You can run this tool **completely offline** – no internet required after loading the page.
-
-1. Clone or download this repository.
-2. Open `index.html` in any modern browser.
-3. Upload a JSON file or paste JSON content.
-4. Adjust field mapping if needed (defaults work for most IPTV JSON structures).
-5. Click **"Convert to M3U"**.
-6. Copy or download the generated M3U playlist.
-
----
-
 ## 📸 Screenshots | স্ক্রিনশট
 
 | Light Theme | Dark Theme |
