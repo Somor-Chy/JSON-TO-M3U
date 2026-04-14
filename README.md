@@ -1,4 +1,4 @@
-# JSON-TO-M3U
+# JSON ⇄ M3U Playlist Converter Tools
 
 **A universal, client-side tool to convert any JSON playlist (IPTV, streaming, etc.) into a standard M3U file — with live preview, custom field mapping, and a rich UI.**
 
